@@ -6,12 +6,14 @@ import hai913i.tp2.graphe.Arete;
 import hai913i.tp2.graphe.GrapheCouplage;
 import hai913i.tp2.input.CsvFactsSource;
 import hai913i.tp2.input.FactsSource;
+import hai913i.tp2.regroupement.Coupe;
 import hai913i.tp2.regroupement.Dendrogramme;
 import hai913i.tp2.regroupement.Groupe;
 import hai913i.tp2.regroupement.Regroupement;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Locale;
 
 /**
@@ -186,6 +188,32 @@ public final class Main {
             System.exit(2);
             return;
         }
+        // ---------- B3 : coupe du dendrogramme ----------
+        System.out.println("===============B3=========================");
+        int nbClasses = facts.classNames().size();
+        int maxModules = nbClasses / 2;
+        List<Groupe> modules = Coupe.couper(racine, couplage, cp);
+
+        System.out.println("Seuil CP : " + cp);
+        int numero = 1;
+        for (Groupe module : modules) {
+            String interne = "-"; // un module d'une seule classe n'a aucun couple
+            if (module.classes.size() >= 2) {
+                interne = String.format(Locale.ROOT, "%.4f", Coupe.couplageInterneMoyen(module, couplage));
+            }
+            System.out.println(String.format(Locale.ROOT, "Module %2d : %2d classe(s)  C interne = %s  %s",
+                    numero, module.classes.size(), interne, module.libelle()));
+            numero++;
+        }
+
+        System.out.println("Nombre de modules : " + modules.size() + " (maximum autorisé M/2 = " + maxModules + ")");
+        if (modules.size() > maxModules) {
+            System.out.println("CONTRAINTE M/2 VIOLÉE : cette coupe est rejetée.");
+        } else {
+            System.out.println("Contrainte M/2 respectée.");
+        }
+        System.out.println("Partition valide : " + Coupe.partitionValide(modules, nbClasses));
+        System.out.println("Seuil respecté par tous les modules : " + Coupe.seuilRespecte(modules, couplage, cp));
     }
 
 
