@@ -6,6 +6,9 @@ import hai913i.tp2.graphe.Arete;
 import hai913i.tp2.graphe.GrapheCouplage;
 import hai913i.tp2.input.CsvFactsSource;
 import hai913i.tp2.input.FactsSource;
+import hai913i.tp2.regroupement.Groupe;
+import hai913i.tp2.regroupement.Regroupement;
+
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Locale;
@@ -146,7 +149,27 @@ public final class Main {
             System.exit(2);
             return;
         }
+        // ---------- B1 : clustering hiérarchique ascendant ----------------
+        System.out.println("===============B1=========================");
+        Regroupement regroupement = new Regroupement(couplage, facts.classNames());
+
+        int etape = 1;
+        boolean decroissant = true;          // vrai tant que les similarités ne remontent jamais
+        double precedente = Double.MAX_VALUE;
+        for (Groupe fusion : regroupement.fusions()) {
+            System.out.println(String.format(Locale.ROOT, "Étape %2d : %s + %s  S=%.4f  -> groupe %d",
+                    etape, fusion.gauche.libelle(), fusion.droit.libelle(), fusion.similarite, fusion.id));
+            if (fusion.similarite > precedente + 1e-9) {
+                decroissant = false;
+            }
+            precedente = fusion.similarite;
+            etape++;
+        }
+        System.out.println("Nombre de fusions : " + regroupement.fusions().size());
+        System.out.println("Similarités qui ne remontent jamais : " + decroissant);
+        System.out.println("Classes dans la racine : " + regroupement.racine().classes.size());
     }
+
 
 
 }
