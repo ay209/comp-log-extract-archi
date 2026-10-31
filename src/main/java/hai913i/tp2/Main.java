@@ -6,6 +6,7 @@ import hai913i.tp2.graphe.Arete;
 import hai913i.tp2.graphe.GrapheCouplage;
 import hai913i.tp2.input.CsvFactsSource;
 import hai913i.tp2.input.FactsSource;
+import hai913i.tp2.regroupement.Dendrogramme;
 import hai913i.tp2.regroupement.Groupe;
 import hai913i.tp2.regroupement.Regroupement;
 
@@ -168,6 +169,23 @@ public final class Main {
         System.out.println("Nombre de fusions : " + regroupement.fusions().size());
         System.out.println("Similarités qui ne remontent jamais : " + decroissant);
         System.out.println("Classes dans la racine : " + regroupement.racine().classes.size());
+
+        // ---------- B2 : dendrogramme ----------
+        System.out.println("===============B2=========================");
+        Groupe racine = regroupement.racine();
+        System.out.println("Feuilles       : " + Dendrogramme.compterFeuilles(racine));
+        System.out.println("Nœuds internes : " + Dendrogramme.compterInternes(racine));
+        System.out.println("Arbre valide   : " + Dendrogramme.estValide(racine, facts.classNames().size()));
+        try {
+            Dendrogramme.exporterTexte(Path.of("sorties", "dendrogramme.txt"), racine);
+            Dendrogramme.exporterFusions(Path.of("sorties", "fusions.csv"), regroupement.fusions());
+            Dendrogramme.exporterDot(Path.of("sorties", "dendrogramme.dot"), racine);
+            System.out.println("Exports : sorties/dendrogramme.txt, sorties/fusions.csv, sorties/dendrogramme.dot");
+        } catch (IOException e) {
+            System.err.println("Erreur d'export : " + e.getMessage());
+            System.exit(2);
+            return;
+        }
     }
 
 
