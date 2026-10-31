@@ -2,6 +2,8 @@ package hai913i.tp2;
 
 import hai913i.tp2.couplage.Couple;
 import hai913i.tp2.couplage.Couplage;
+import hai913i.tp2.graphe.Arete;
+import hai913i.tp2.graphe.GrapheCouplage;
 import hai913i.tp2.input.CsvFactsSource;
 import hai913i.tp2.input.FactsSource;
 import java.io.IOException;
@@ -110,5 +112,41 @@ public final class Main {
             System.out.println(String.format(Locale.ROOT, "%s - %s  r=%d  C=%.4f",
                     c.classeA, c.classeB, c.nbArcs, valeur));
         }
+        // ---------- A2 : graphe de couplage pondéré ----------
+        System.out.println("===============A2=========================");
+        GrapheCouplage graphe = new GrapheCouplage(couplage, facts.classNames());
+        System.out.println("Nœuds  : " + graphe.nbNoeuds());
+        System.out.println("Arêtes : " + graphe.nbAretes());
+
+        System.out.println("Les 5 couples les plus couplés :");
+        for (int i = 0; i < 5 && i < graphe.nbAretes(); i++) {
+            Arete a = graphe.aretes().get(i);
+            System.out.println(String.format(Locale.ROOT, "  %s - %s  C=%.4f", a.classeA, a.classeB, a.poids));
+        }
+        System.out.println("Classes isolées : " + graphe.classesIsolees());
+
+        // export, puis rechargement pour vérifier qu'on retrouve les mêmes valeurs
+        try {
+            Path csv = Path.of("sorties", "graphe.csv");
+            graphe.exporterCsv(csv);
+            graphe.exporterDot(Path.of("sorties", "graphe.dot"));
+
+            GrapheCouplage recharge = GrapheCouplage.charger(csv);
+            boolean identique = recharge.nbNoeuds() == graphe.nbNoeuds()
+                    && recharge.nbAretes() == graphe.nbAretes();
+            for (Arete a : graphe.aretes()) {
+                if (recharge.poids(a.classeA, a.classeB) != a.poids) {
+                    identique = false;
+                }
+            }
+            System.out.println("Exports écrits dans : " + Path.of("sorties").toAbsolutePath());
+            System.out.println("Rechargement identique : " + identique);
+        } catch (IOException e) {
+            System.err.println("Erreur d'export : " + e.getMessage());
+            System.exit(2);
+            return;
+        }
     }
+
+
 }
