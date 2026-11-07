@@ -1,11 +1,11 @@
 # HAI913I – TP 2 : Compréhension et architectures
 
-Commandes pour rejouer les étapes A0 à B3.
+Commandes pour rejouer les étapes A0 à C3.
 
 ## Projet
 
 ```bash
-cd ~/Téléchargements/"starter"
+cd ~/Téléchargements/"starter(4)"
 ```
 
 ## A0
@@ -57,3 +57,33 @@ java -jar target/hai913i-tp2.jar /home/user/Téléchargements/resources --cp 0.0
 java -jar target/hai913i-tp2.jar /home/user/Téléchargements/resources --cp 0.025
 java -jar target/hai913i-tp2.jar /home/user/Téléchargements/resources --cp 0.045
 ```
+
+## Bonus C1 : lien simple contre lien moyen
+
+```bash
+java -jar target/hai913i-tp2.jar /home/user/Téléchargements/resources --comparer-liaisons
+dot -Tpng sorties/dendrogramme-simple.dot -o sorties/dendrogramme-simple.png
+```
+
+## Bonus C2 : relation enrichie avec l'héritage
+
+```bash
+mvn clean package
+java -jar target/hai913i-tp2.jar /home/user/Téléchargements/resources --heritage
+dot -Tpng sorties/dendrogramme-heritage.dot -o sorties/dendrogramme-heritage.png
+```
+
+## Bonus C3 : explorateur graphique (Swing)
+
+```bash
+mvn clean package
+java -jar target/hai913i-tp2.jar /home/user/Téléchargements/resources --gui
+```
+
+Les options se combinent, par exemple :
+
+```bash
+java -jar target/hai913i-tp2.jar /home/user/Téléchargements/resources --cp 0.025 --comparer-liaisons --heritage
+```
+
+Les fichiers exportés (CSV, DOT, texte) sont écrits dans `sorties/`.
