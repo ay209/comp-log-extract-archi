@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+# Une nouvelle poussée annule le run précédent de la même branche.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # 1. Les tests JUnit (A0 à C4), sur JDK 17 (minimum du sujet) et 21.
+  tests:
+    name: Tests JUnit (JDK ${{ matrix.java }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        java: [17, 21]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+          cache: maven
+      - name: mvn verify
+        run: mvn -B -ntp verify
+      - name: Rapports Surefire
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-jdk${{ matrix.java }}
+          path: target/surefire-reports
+          if-no-files-found: ignore
+
+  # 2. La chaîne de bout en bout : le jar sur la validation et sur JUnit 3.8.2,
+  #    points de contrôle du sujet, bonus, codes de sortie, puis rendu Graphviz des .dot.
+  chaine:
+    name: Chaîne complète (jar + Graphviz)
+    needs: tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+      - name: Graphviz
+        run: sudo apt-get update -q && sudo apt-get install -y -q graphviz
+      - name: Construire le jar
+        run: mvn -B -ntp package -DskipTests
+      - name: Vérifier la chaîne
+        run: |
+          set -o pipefail
+          bash scripts/verifier-chaine.sh target/hai913i-tp2.jar | tee verification.txt
+      - name: Résumé
+        if: always()
+        run: |
+          {
+            echo '### Vérification de la chaîne'
+            echo
+            echo '```'
+            cat verification.txt 2>/dev/null || echo "(pas de sortie)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Sorties et diagrammes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sorties-ci
+          path: sorties-ci
+          if-no-files-found: ignore
+      - name: Jar exécutable
+        uses: actions/upload-artifact@v4
+        with:
+          name: hai913i-tp2
+          path: target/hai913i-tp2.jar

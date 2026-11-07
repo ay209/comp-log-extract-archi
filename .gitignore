@@ -6,4 +6,4 @@ target/
 .classpath
 .project
 .vscode/
-.DS_Store
+sorties-ci/

@@ -131,7 +131,7 @@ public class GrapheCouplage {
     /** Écrit le graphe au format DOT, que Graphviz sait transformer en image. */
     public void exporterDot(Path fichier) throws IOException {
         List<String> lignes = new ArrayList<>();
-        lignes.add("graph couplage ");
+        lignes.add("graph couplage {");
 
         // tous les nœuds, pour que les classes isolées apparaissent aussi
         for (String noeud : noeuds) {

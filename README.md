@@ -1,6 +1,6 @@
 # HAI913I – TP 2 : Compréhension et architectures
 
-Commandes pour rejouer les étapes A0 à C3.
+Commandes pour rejouer les étapes A0 à C4.
 
 ## Projet
 
@@ -80,15 +80,6 @@ mvn clean package
 java -jar target/hai913i-tp2.jar /home/user/Téléchargements/resources --gui
 ```
 
-Les options se combinent, par exemple :
-
-```bash
-java -jar target/hai913i-tp2.jar /home/user/Téléchargements/resources --cp 0.025 --comparer-liaisons --heritage
-```
-
-Les fichiers exportés (CSV, DOT, texte) sont écrits dans `sorties/`.
-
-
 ## Bonus C4 : un second projet, JUnit 3.8.2
 
 Les faits de JUnit 3.8.2 (partie produit) ont été reconstruits par l'extracteur JDT
@@ -127,3 +118,27 @@ java -jar target/hai913i-tp2.jar /home/user/Téléchargements/resources --cp 0.0
 ```
 
 Les fichiers exportés (CSV, DOT, texte) sont écrits dans `sorties/`.
+
+## Tests et intégration continue
+
+```bash
+mvn clean test                                   # 43 tests JUnit, de A0 à C4
+mvn clean package                                # le jar, puis :
+bash scripts/verifier-chaine.sh                  # la chaîne de bout en bout
+FAITS_CANONIQUES=<dossier-du-jeu-canonique> bash scripts/verifier-chaine.sh   # + canonique contre JDT
+```
+
+Les tests des étapes A1 à C3 utilisent le micro jeu (`src/test/resources`) et le projet
+de validation reconstruit par JDT (`c4/faits/validation-jdt`) : le jeu canonique n'est pas
+dans le dépôt, mais ce jeu-là donne exactement la même partition.
+
+`scripts/verifier-chaine.sh` lance le jar sur la validation (avec C1, C2, `--paquetages`)
+et sur JUnit, vérifie les points de contrôle du sujet dans la sortie, échoue si une
+vérification intégrée affiche `false`, contrôle les codes de sortie des cas d'erreur
+(1 : argument invalide ; 2 : fichier absent ou illisible, `--gui` sans écran), puis, si
+Graphviz est installé, convertit chaque `.dot` en PNG. Les exports vont dans `sorties-ci/`
+(ignoré par git).
+
+Le workflow `.github/workflows/ci.yml` fait la même chose à chaque poussée : tests sur
+JDK 17 et 21, puis la chaîne complète avec Graphviz. Les sorties, les images et le jar
+sont joints au run (onglet Actions).
