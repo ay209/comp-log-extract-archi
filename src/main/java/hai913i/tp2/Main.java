@@ -12,6 +12,8 @@ import hai913i.tp2.gui.Modele;
 import hai913i.tp2.input.CsvFactsSource;
 import hai913i.tp2.input.FactsSource;
 import hai913i.tp2.input.Heritage;
+import hai913i.tp2.mq.ChoixDuSeuil;
+import hai913i.tp2.mq.QualiteModularisation;
 import hai913i.tp2.regroupement.ComparaisonLiaisons;
 import hai913i.tp2.regroupement.Coupe;
 import hai913i.tp2.regroupement.Dendrogramme;
@@ -23,6 +25,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Point d'entrée du TP 2.
@@ -30,6 +33,7 @@ import java.util.Map;
  * Usage :
  *   java -jar target/hai913i-tp2.jar <dossier-des-faits> [--cp <valeur>] [--comparer-liaisons] [--heritage]
  *        [--gui] [--sorties <dossier>] [--balayage] [--paquetages] [--comparer-avec <dossier-des-faits>]
+ *        [--mq]
  *
  * A0 : charge les faits et affiche les 3 compteurs.
  * A1 : calcule le couplage entre classes.
@@ -44,6 +48,8 @@ import java.util.Map;
  *   --balayage coupe l'arbre pour une gamme de CP, --paquetages compare les modules aux
  *   paquetages, --comparer-avec compare les modules à ceux d'un autre jeu de faits du même
  *   projet (autre extracteur).
+ * MQ (bonus, --mq) : qualité de modularisation de Mancoridis et al. pour chaque coupe
+ *   possible, et choix de CP par le meilleur MQ sous la contrainte M/2.
  */
 public final class Main {
 
@@ -54,7 +60,7 @@ public final class Main {
     public static void main(String[] args) {
         if (args.length == 0) {
             System.err.println("Usage : java -jar hai913i-tp2.jar <dossier-des-faits> [--cp <valeur>] [--comparer-liaisons] [--heritage] [--gui]");
-            System.err.println("        [--sorties <dossier>] [--balayage] [--paquetages] [--comparer-avec <dossier-des-faits>]");
+            System.err.println("        [--sorties <dossier>] [--balayage] [--paquetages] [--comparer-avec <dossier-des-faits>] [--mq]");
             System.exit(1);
             return;
         }
@@ -68,6 +74,7 @@ public final class Main {
         Path sorties = Path.of("sorties");  // bonus C4 : dossier des exports
         boolean balayage = false;           // bonus C4
         boolean paquetages = false;         // bonus C4
+        boolean mq = false;                 // bonus : qualité de modularisation (MQ)
         Path autresFaits = null;            // bonus C4 : second jeu de faits du même projet
         for (int i = 1; i < args.length; i++) {
             if ("--cp".equals(args[i])) {
@@ -109,6 +116,8 @@ public final class Main {
                 balayage = true;
             } else if ("--paquetages".equals(args[i])) {
                 paquetages = true;
+            } else if ("--mq".equals(args[i])) {
+                mq = true;
             } else {
                 System.err.println("Argument inconnu : " + args[i]);
                 System.exit(1);
@@ -314,6 +323,41 @@ public final class Main {
             for (String ligne : ComparaisonPartitions.resume(r, facts.name(), autres.name())) {
                 System.out.println("  " + ligne);
             }
+        }
+
+        // ---------- Bonus : qualité de modularisation (MQ) et choix de CP ----------
+        if (mq) {
+            System.out.println("===============MQ=========================");
+            Set<QualiteModularisation.Dependance> mdg = QualiteModularisation.graphe(facts);
+            System.out.println("Graphe de dépendances (MDG) : " + nbClasses + " classes, " + mdg.size()
+                    + " arcs orientés entre classes");
+            List<ChoixDuSeuil.Palier> paliers = ChoixDuSeuil.paliers(racine, couplage, mdg, nbClasses);
+            ChoixDuSeuil.Palier retenu = ChoixDuSeuil.meilleur(paliers);
+            ChoixDuSeuil.Palier courant = ChoixDuSeuil.palierDe(paliers, cp);
+            System.out.println("Toutes les coupes possibles (" + paliers.size() + "), M/2 = " + maxModules + " :");
+            for (String ligne : ChoixDuSeuil.tableau(paliers, retenu, courant)) {
+                System.out.println(ligne);
+            }
+            System.out.println(String.format(Locale.ROOT, "MQ de la coupe courante (CP = %s) : %.4f",
+                    cp, courant.mq().mq()));
+            if (retenu == null) {
+                System.out.println("Aucune coupe ne respecte M/2.");
+            } else {
+                System.out.println(String.format(Locale.ROOT,
+                        "Meilleur MQ sous M/2 : %.4f, %d modules, CP dans [%.5f ; %.5f[ (milieu : %.5f)",
+                        retenu.mq().mq(), retenu.modules().size(), retenu.debut(), retenu.fin(), retenu.milieu()));
+                for (Groupe module : retenu.modules()) {
+                    if (module.classes.size() >= 2) {
+                        System.out.println("  " + module.libelle());
+                    }
+                }
+                System.out.println("  + " + retenu.modules().stream().filter(g -> g.classes.size() == 1).count()
+                        + " module(s) d'une classe");
+            }
+            ChoixDuSeuil.Palier libre = ChoixDuSeuil.meilleur(paliers, false);
+            System.out.println(String.format(Locale.ROOT, "Meilleur MQ sans la contrainte M/2 : %.4f, %d modules%s",
+                    libre.mq().mq(), libre.modules().size(),
+                    libre == retenu ? " (la même coupe : M/2 ne joue pas)" : " (la contrainte M/2 écarte cette coupe)"));
         }
 
         // ---------- C1 (bonus) : lien moyen contre lien simple ----------

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Test de bout en bout : lance le jar sur les jeux de faits du dépôt et vérifie les
-# points de contrôle du sujet (A0 à B3), les bonus C1 à C4 et les codes de sortie.
+# points de contrôle du sujet (A0 à B3), les bonus C1 à C4 et MQ, et les codes de sortie.
 #
 #   scripts/verifier-chaine.sh [chemin/du/jar]        (défaut : target/hai913i-tp2.jar)
 #
@@ -59,7 +59,7 @@ code() {
 echo "== Validation, CP = 0.025, avec C1, C2 et les paquetages (C4)"
 C=$OUT/validation.txt
 lancer "$C" "$VALID" --cp 0.025 --sorties "$OUT/validation" \
-       --comparer-liaisons --heritage --paquetages --comparer-avec "$VALID"
+       --comparer-liaisons --heritage --paquetages --comparer-avec "$VALID" --mq
 attendu "$C" "Classes           : 15"
 attendu "$C" "Méthodes          : 59"
 attendu "$C" "Arcs du graphe    : 44"
@@ -84,6 +84,10 @@ attendu "$C" "|Einter| : 37 -> 41"
 attendu "$C" "Modules avec la relation enrichie, CP = 0.0226 : 7"
 attendu "$C" "Indice de Rand                 : 0.6381"
 attendu "$C" "(partitions identiques)"
+attendu "$C" "Graphe de dépendances (MDG) : 15 classes, 19 arcs orientés entre classes"
+attendu "$C" "MQ de la coupe courante (CP = 0.025) : 0.0899"
+attendu "$C" "Meilleur MQ sous M/2 : 0.0899, 7 modules, CP dans [0.02327 ; 0.02703["
+attendu "$C" "(la même coupe : M/2 ne joue pas)"
 sans_false "$C"
 
 echo "== Validation, les deux autres seuils du sujet"
@@ -98,7 +102,7 @@ attendu "$C" "CONTRAINTE M/2 VIOLÉE"
 
 echo "== Second projet (C4) : JUnit 3.8.2"
 C=$OUT/junit.txt
-lancer "$C" "$JUNIT" --cp 0.005 --sorties "$OUT/junit-3.8.2" --balayage --paquetages
+lancer "$C" "$JUNIT" --cp 0.005 --sorties "$OUT/junit-3.8.2" --balayage --paquetages --mq
 attendu "$C" "Classes           : 58"
 attendu "$C" "Méthodes          : 489"
 attendu "$C" "Arcs du graphe    : 515"
@@ -107,6 +111,8 @@ attendu "$C" "Nombre de fusions : 57"
 attendu "$C" "Nombre de modules : 26 (maximum autorisé M/2 = 29)"
 attendu "$C" "  0.006      33    29  VIOLÉE"
 attendu "$C" "Indice de Rand                 : 0.7290"
+attendu "$C" "MQ de la coupe courante (CP = 0.005) : 0.1028"
+attendu "$C" "Meilleur MQ sous M/2 : 0.1186, 20 modules"
 sans_false "$C"
 
 if [ -n "${FAITS_CANONIQUES:-}" ]; then

@@ -119,10 +119,26 @@ java -jar target/hai913i-tp2.jar /home/user/Téléchargements/resources --cp 0.0
 
 Les fichiers exportés (CSV, DOT, texte) sont écrits dans `sorties/`.
 
+## Bonus : qualité de modularisation (MQ) et choix automatique de CP
+
+```bash
+java -jar target/hai913i-tp2.jar c4/faits/validation-jdt --cp 0.025 --mq
+java -jar target/hai913i-tp2.jar c4/faits/junit-3.8.2-jdt --cp 0.005 --mq
+```
+
+`--mq` énumère toutes les coupes possibles de l'arbre (une par intervalle de CP : la coupe
+ne change que quand CP franchit le couplage interne moyen d'un nœud), calcule pour chacune
+le MQ de Mancoridis et al. (1998) sur le graphe orienté des dépendances entre classes, et
+indique la coupe de meilleur MQ qui respecte M/2, avec son intervalle de CP.
+
+Attendu : validation, meilleur MQ 0,0899 à 7 modules, CP dans [0,02327 ; 0,02703[ (le
+choix du rapport) ; JUnit, meilleur MQ 0,1186 à 20 modules, CP dans [0,00312 ; 0,00347[,
+contre 0,1028 pour la coupe à 0,005.
+
 ## Tests et intégration continue
 
 ```bash
-mvn clean test                                   # 43 tests JUnit, de A0 à C4
+mvn clean test                                   # 49 tests JUnit, de A0 à C4 et MQ
 mvn clean package                                # le jar, puis :
 bash scripts/verifier-chaine.sh                  # la chaîne de bout en bout
 FAITS_CANONIQUES=<dossier-du-jeu-canonique> bash scripts/verifier-chaine.sh   # + canonique contre JDT
