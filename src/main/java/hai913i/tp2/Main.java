@@ -4,13 +4,17 @@ import hai913i.tp2.couplage.Couple;
 import hai913i.tp2.couplage.Couplage;
 import hai913i.tp2.graphe.Arete;
 import hai913i.tp2.graphe.GrapheCouplage;
+import hai913i.tp2.gui.Explorateur;
+import hai913i.tp2.gui.Modele;
 import hai913i.tp2.input.CsvFactsSource;
 import hai913i.tp2.input.FactsSource;
+import hai913i.tp2.input.Heritage;
+import hai913i.tp2.regroupement.ComparaisonLiaisons;
 import hai913i.tp2.regroupement.Coupe;
 import hai913i.tp2.regroupement.Dendrogramme;
 import hai913i.tp2.regroupement.Groupe;
+import hai913i.tp2.regroupement.Liaison;
 import hai913i.tp2.regroupement.Regroupement;
-
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
@@ -20,10 +24,16 @@ import java.util.Locale;
  * Point d'entrée du TP 2.
  *
  * Usage :
- *   java -jar target/hai913i-tp2.jar <dossier-des-faits> [--cp <valeur>]
+ *   java -jar target/hai913i-tp2.jar <dossier-des-faits> [--cp <valeur>] [--comparer-liaisons] [--heritage]
  *
  * A0 : charge les faits et affiche les 3 compteurs.
  * A1 : calcule le couplage entre classes.
+ * A2 : graphe de couplage pondéré (exports CSV et DOT).
+ * B1 : clustering hiérarchique ascendant (lien moyen).
+ * B2 : dendrogramme (exports texte, CSV et DOT).
+ * B3 : coupe du dendrogramme en modules (contrainte M/2, seuil CP).
+ * C1 (bonus, --comparer-liaisons) : compare le lien moyen et le lien simple.
+ * C2 (bonus, --heritage) : enrichit la relation avec l'héritage et compare les modules.
  */
 public final class Main {
 
@@ -33,7 +43,7 @@ public final class Main {
 
     public static void main(String[] args) {
         if (args.length == 0) {
-            System.err.println("Usage : java -jar hai913i-tp2.jar <dossier-des-faits> [--cp <valeur>]");
+            System.err.println("Usage : java -jar hai913i-tp2.jar <dossier-des-faits> [--cp <valeur>] [--comparer-liaisons] [--heritage]");
             System.exit(1);
             return;
         }
@@ -41,6 +51,9 @@ public final class Main {
         // lecture des arguments
         Path dir = Path.of(args[0]);
         double cp = CP_DEFAUT;
+        boolean comparerLiaisons = false;   // bonus C1
+        boolean avecHeritage = false;       // bonus C2
+        boolean gui = false;                // bonus C3
         for (int i = 1; i < args.length; i++) {
             if ("--cp".equals(args[i])) {
                 if (i + 1 >= args.length) {
@@ -60,7 +73,13 @@ public final class Main {
                     System.exit(1);
                     return;
                 }
-            } else {
+            } else if ("--comparer-liaisons".equals(args[i])) {
+                comparerLiaisons = true;
+            } else if ("--heritage".equals(args[i])) {
+                avecHeritage = true;
+            } else if ("--gui".equals(args[i])) {
+                gui = true;}
+            else {
                 System.err.println("Argument inconnu : " + args[i]);
                 System.exit(1);
                 return;
@@ -69,8 +88,9 @@ public final class Main {
 
         // ---------- A0 : chargement des faits derrière FactsSource ----------
         FactsSource facts;
+        String prefix;
         try {
-            String prefix = Facts.discoverPrefix(dir);
+            prefix = Facts.discoverPrefix(dir);
             facts = new CsvFactsSource(dir, prefix);
         } catch (IOException e) {
             System.err.println("Erreur de lecture : " + e.getMessage());
@@ -118,6 +138,7 @@ public final class Main {
             System.out.println(String.format(Locale.ROOT, "%s - %s  r=%d  C=%.4f",
                     c.classeA, c.classeB, c.nbArcs, valeur));
         }
+
         // ---------- A2 : graphe de couplage pondéré ----------
         System.out.println("===============A2=========================");
         GrapheCouplage graphe = new GrapheCouplage(couplage, facts.classNames());
@@ -152,6 +173,7 @@ public final class Main {
             System.exit(2);
             return;
         }
+
         // ---------- B1 : clustering hiérarchique ascendant ----------------
         System.out.println("===============B1=========================");
         Regroupement regroupement = new Regroupement(couplage, facts.classNames());
@@ -188,6 +210,7 @@ public final class Main {
             System.exit(2);
             return;
         }
+
         // ---------- B3 : coupe du dendrogramme ----------
         System.out.println("===============B3=========================");
         int nbClasses = facts.classNames().size();
@@ -214,8 +237,119 @@ public final class Main {
         }
         System.out.println("Partition valide : " + Coupe.partitionValide(modules, nbClasses));
         System.out.println("Seuil respecté par tous les modules : " + Coupe.seuilRespecte(modules, couplage, cp));
+
+        // ---------- C1 (bonus) : lien moyen contre lien simple ----------
+        if (comparerLiaisons) {
+            System.out.println("===============C1=========================");
+            Regroupement simple = new Regroupement(couplage, facts.classNames(), Liaison.SIMPLE);
+            List<Groupe> fusionsMoyen = regroupement.fusions();
+            List<Groupe> fusionsSimple = simple.fusions();
+
+            System.out.println("Étape | lien moyen                                   | lien simple");
+            for (int i = 0; i < fusionsMoyen.size(); i++) {
+                Groupe m = fusionsMoyen.get(i);
+                Groupe sm = fusionsSimple.get(i);
+                System.out.println(String.format(Locale.ROOT, "%5d | S=%.4f %s + %s | S=%.4f %s + %s",
+                        i + 1, m.similarite, m.gauche.libelle(), m.droit.libelle(),
+                        sm.similarite, sm.gauche.libelle(), sm.droit.libelle()));
+            }
+            int divergence = ComparaisonLiaisons.premiereDivergence(fusionsMoyen, fusionsSimple);
+            if (divergence == -1) {
+                System.out.println("Les deux arbres sont identiques.");
+            } else {
+                System.out.println("Première divergence à l'étape " + divergence);
+            }
+
+            // exports du lien simple, dans des fichiers à part (ceux du lien moyen ne sont pas écrasés)
+            try {
+                Dendrogramme.exporterTexte(Path.of("sorties", "dendrogramme-simple.txt"), simple.racine());
+                Dendrogramme.exporterFusions(Path.of("sorties", "fusions-simple.csv"), fusionsSimple);
+                Dendrogramme.exporterDot(Path.of("sorties", "dendrogramme-simple.dot"), simple.racine());
+                System.out.println("Exports : sorties/dendrogramme-simple.txt, fusions-simple.csv, dendrogramme-simple.dot");
+            } catch (IOException e) {
+                System.err.println("Erreur d'export : " + e.getMessage());
+                System.exit(2);
+                return;
+            }
+
+            // modules obtenus avec le lien simple, au même CP
+            List<Groupe> modulesSimple = Coupe.couper(simple.racine(), couplage, cp);
+            System.out.println("Lien simple, CP = " + cp + " : " + modulesSimple.size() + " module(s)");
+            for (Groupe module : modulesSimple) {
+                System.out.println("  " + module.libelle());
+            }
+        }
+
+        // ---------- C2 (bonus) : relation enrichie avec l'héritage ----------
+        if (avecHeritage) {
+            System.out.println("===============C2=========================");
+            System.out.println("Relation C2 : appels de méthode + héritage + implémentation d'interface");
+            System.out.println("(chaque lien entre deux classes du projet compte comme un arc inter-classes)");
+            try {
+                List<Heritage.Lien> liens = Heritage.lire(dir, prefix, facts.classNames());
+                for (Heritage.Lien lien : liens) {
+                    System.out.println("  lien : " + Groupe.nomCourt(lien.enfant()) + " -> " + Groupe.nomCourt(lien.parent()));
+                }
+                Couplage couplageC2 = new Couplage(facts, liens);
+                System.out.println("Liens ajoutés : " + liens.size());
+                System.out.println("|Einter| : " + couplage.nbArcsInter() + " -> " + couplageC2.nbArcsInter());
+                System.out.println("Couples non nuls : " + couplage.nbCouplesNonNuls() + " -> " + couplageC2.nbCouplesNonNuls());
+                System.out.println(String.format(Locale.ROOT, "Somme des couplages : %.4f", couplageC2.somme()));
+
+                Regroupement regroupementC2 = new Regroupement(couplageC2, facts.classNames());
+                int etapeC2 = 1;
+                for (Groupe fusion : regroupementC2.fusions()) {
+                    System.out.println(String.format(Locale.ROOT, "Étape %2d : %s + %s  S=%.4f",
+                            etapeC2, fusion.gauche.libelle(), fusion.droit.libelle(), fusion.similarite));
+                    etapeC2++;
+                }
+                Dendrogramme.exporterTexte(Path.of("sorties", "dendrogramme-heritage.txt"), regroupementC2.racine());
+                Dendrogramme.exporterFusions(Path.of("sorties", "fusions-heritage.csv"), regroupementC2.fusions());
+                Dendrogramme.exporterDot(Path.of("sorties", "dendrogramme-heritage.dot"), regroupementC2.racine());
+                System.out.println("Exports : sorties/dendrogramme-heritage.txt, fusions-heritage.csv, dendrogramme-heritage.dot");
+
+                // Les liens ajoutés agrandissent |Einter| : tous les couplages sont réduits d'autant.
+                // Pour comparer à exigence équivalente, on ramène CP à la même échelle.
+                double cpC2 = cp * couplage.nbArcsInter() / couplageC2.nbArcsInter();
+                System.out.println(String.format(Locale.ROOT,
+                        "CP équivalent : %.4f x %d / %d = %.4f", cp, couplage.nbArcsInter(),
+                        couplageC2.nbArcsInter(), cpC2));
+                List<Groupe> modulesC2 = Coupe.couper(regroupementC2.racine(), couplageC2, cpC2);
+                System.out.println("Modules avec la relation enrichie, CP = " + String.format(Locale.ROOT, "%.4f", cpC2)
+                        + " : " + modulesC2.size() + " (maximum autorisé M/2 = " + maxModules + ")");
+                if (modulesC2.size() > maxModules) {
+                    System.out.println("CONTRAINTE M/2 VIOLÉE : cette coupe est rejetée.");
+                }
+                for (Groupe module : modulesC2) {
+                    String statut = ComparaisonLiaisons.moduleIdentiqueDans(module, modules)
+                            ? "identique au modèle imposé (CP = " + cp + ")" : "DIFFÉRENT du modèle imposé";
+                    System.out.println("  " + module.libelle() + "   [" + statut + "]");
+                }
+                System.out.println("Partition valide : " + Coupe.partitionValide(modulesC2, nbClasses));
+                System.out.println("Seuil respecté par tous les modules : " + Coupe.seuilRespecte(modulesC2, couplageC2, cpC2));
+            } catch (IOException e) {
+                System.err.println("Erreur C2 : " + e.getMessage());
+                System.exit(2);
+                return;
+            }
+        }
+        // ---------- C3 (bonus)
+        if (gui) {
+            if (java.awt.GraphicsEnvironment.isHeadless()) {
+                System.err.println("--gui demande un environnement graphique (aucun écran détecté).");
+                System.exit(2);
+                return;
+            }
+            List<Heritage.Lien> liensGui = null;
+            try {
+                liensGui = Heritage.lire(dir, prefix, facts.classNames());
+            } catch (IOException e) {
+                System.out.println("Héritage indisponible (" + e.getMessage() + ") : option désactivée dans la GUI.");
+            }
+            final Modele modeleGui = new Modele(facts, liensGui);
+            final double cpGui = cp;
+            javax.swing.SwingUtilities.invokeLater(() -> new Explorateur(modeleGui, cpGui).setVisible(true));
+            return;
+        }
     }
-
-
-
 }

@@ -7,15 +7,22 @@ import java.util.List;
 /** Clustering hiérarchique ascendant */
 public class Regroupement {
 
-    // deux nombres à moins de 1e-9 d'écart sont considérés égaux (on ne compare pas des double avec ==)
+    // deux nombres à moins de 1e-9 d'écart sont considérés égaux
     private static final double TOLERANCE = 1e-9;
 
     private Couplage couplage;
+    private Liaison liaison;                          // MOYEN  ou SIMPLE
     private List<Groupe> fusions = new ArrayList<>(); // les fusions, dans l'ordre où elles ont lieu
     private Groupe racine;                            // le dernier groupe : il contient toutes les classes
 
+    /** Constructeur du sujet : lien moyen. */
     public Regroupement(Couplage couplage, List<String> classes) {
+        this(couplage, classes, Liaison.MOYEN);
+    }
+
+    public Regroupement(Couplage couplage, List<String> classes, Liaison liaison) {
         this.couplage = couplage;
+        this.liaison = liaison;
 
         // départ : un groupe par classe
         List<Groupe> actifs = new ArrayList<>();
@@ -81,19 +88,27 @@ public class Regroupement {
     }
 
     /**
-     * Lien moyen entre deux groupes :
-     * moyenne du couplage sur TOUS les couples
-     * y compris ceux dont le couplage vaut 0.
+     * Similarité entre deux groupes, selon le critère de liaison choisi.
      * On repart toujours des couplages entre classes, jamais des anciennes similarités.
+     *  - MOYEN  : moyenne sur TOUS les couples inter-groupes (les couples à 0 comptent),
+     *             dénominateur |G1| x |G2|.
+     *  - SIMPLE : valeur du meilleur couple inter-groupes (le maximum).
      */
     private double similarite(Groupe g1, Groupe g2) {
         double somme = 0;
+        double meilleur = 0;
         for (String a : g1.classes) {
             for (String b : g2.classes) {
-                somme += couplage.valeur(a, b); // 0 si le couple est absent
+                double c = couplage.valeur(a, b); // 0 si le couple est absent
+                somme += c;
+                if (c > meilleur) {
+                    meilleur = c;
+                }
             }
         }
-        // dénominateur = |G1| x |G2| (et non le nombre de couples non nuls)
+        if (liaison == Liaison.SIMPLE) {
+            return meilleur;
+        }
         return somme / (g1.classes.size() * g2.classes.size());
     }
 

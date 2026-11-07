@@ -1,6 +1,7 @@
 package hai913i.tp2.couplage;
 
 import hai913i.tp2.input.FactsSource;
+import hai913i.tp2.input.Heritage;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -11,31 +12,48 @@ public class Couplage {
     private Map<String, Couple> couples = new HashMap<>();
     private int nbArcsInter = 0;
 
+    /** Relation du sujet : uniquement les arcs d'appel de méthode. */
     public Couplage(FactsSource faits) {
+        this(faits, List.of());
+    }
+
+    /**
+     * Relation enrichie (bonus C2) : les arcs d'appel, PLUS des liens supplémentaires
+     * entre classes (héritage, implémentation). Chaque lien compte comme un arc
+     * inter-classes : il entre dans r(A, B) et dans le dénominateur |Einter|.
+     * Le couplage reste donc normalisé : la somme des C(A, B) vaut toujours 1.
+     */
+    public Couplage(FactsSource faits, List<Heritage.Lien> liensSupplementaires) {
         for (FactsSource.Arc arc : faits.arcs()) {
             if (arc.isIntraClass()) {
                 continue; //  on écarte l'arc interne
             }
-            nbArcsInter++;
-
-            // on range toujours les deux noms dans l'ordre alphabétique
-            // pour que A-B et B-A donnent le même couple
-            String a = arc.callerClass();
-            String b = arc.calleeClass();
-            if (a.compareTo(b) > 0) {
-                String temp = a;
-                a = b;
-                b = temp;
-            }
-
-            String cle = a + "|" + b;
-            Couple couple = couples.get(cle);
-            if (couple == null) {
-                couple = new Couple(a, b);
-                couples.put(cle, couple);
-            }
-            couple.nbArcs++;
+            compter(arc.callerClass(), arc.calleeClass());
         }
+        for (Heritage.Lien lien : liensSupplementaires) {
+            compter(lien.enfant(), lien.parent());
+        }
+    }
+
+    /** Compte un arc entre deux classes distinctes, sans tenir compte du sens. */
+    private void compter(String a, String b) {
+        nbArcsInter++;
+
+        // on range toujours les deux noms dans l'ordre alphabétique
+        // pour que A-B et B-A donnent le même couple
+        if (a.compareTo(b) > 0) {
+            String temp = a;
+            a = b;
+            b = temp;
+        }
+
+        String cle = a + "|" + b;
+        Couple couple = couples.get(cle);
+        if (couple == null) {
+            couple = new Couple(a, b);
+            couples.put(cle, couple);
+        }
+        couple.nbArcs++;
     }
 
     public int nbArcsInter() {
