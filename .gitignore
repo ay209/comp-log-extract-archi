@@ -7,3 +7,4 @@ target/
 .project
 .vscode/
 sorties-ci/
+.DS_Store
