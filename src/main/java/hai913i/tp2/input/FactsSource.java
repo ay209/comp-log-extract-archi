@@ -39,4 +39,12 @@ public interface FactsSource {
 
     /** Tous les arcs du graphe d'appel, arcs intra-classe compris. */
     List<Arc> arcs();
+
+    /**
+     * Paquetage d'une classe, tel que le donne le fichier des classes (bonus C4 :
+     * comparaison des modules avec les paquetages). Le jeu canonique donne à une classe
+     * imbriquée sa classe englobante (LoanService.Loan → library.service.LoanService) ;
+     * c4.Paquetages remonte alors au vrai paquetage.
+     */
+    String packageOf(String className);
 }

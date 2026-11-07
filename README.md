@@ -87,3 +87,43 @@ java -jar target/hai913i-tp2.jar /home/user/Téléchargements/resources --cp 0.0
 ```
 
 Les fichiers exportés (CSV, DOT, texte) sont écrits dans `sorties/`.
+
+
+## Bonus C4 : un second projet, JUnit 3.8.2
+
+Les faits de JUnit 3.8.2 (partie produit) ont été reconstruits par l'extracteur JDT
+du TP 1, puis exportés au format du jeu canonique : ils sont dans `c4/faits/`
+(provenance détaillée dans `c4/README.md`). L'outil les lit par le chemin 2, comme
+le jeu fourni.
+
+```bash
+mvn clean package
+# la chaîne complète sur JUnit, avec le balayage de CP et la comparaison aux paquetages
+java -jar target/hai913i-tp2.jar c4/faits/junit-3.8.2-jdt --cp 0.005 \
+     --sorties sorties-c4/junit-3.8.2 --balayage --paquetages
+
+# l'effet de l'extracteur : faits canoniques contre faits reconstruits par JDT
+java -jar target/hai913i-tp2.jar /home/user/Téléchargements/resources --cp 0.025 \
+     --sorties sorties-c4/validation --paquetages --comparer-avec c4/faits/validation-jdt
+```
+
+Options ajoutées pour C4 :
+
+| Option | Rôle |
+|---|---|
+| `--sorties <dossier>` | dossier des exports (défaut : `sorties`), pour ne pas écraser ceux de la validation |
+| `--balayage` | coupe le même arbre pour 16 valeurs de CP et vérifie M/2 à chaque fois |
+| `--paquetages` | compare les modules de la coupe aux paquetages (indice de Rand, puretés) |
+| `--comparer-avec <dossier>` | compare les modules à ceux d'un autre jeu de faits du même projet, au même CP |
+
+Attendu : 58 classes, 489 méthodes, 515 arcs, |Einter| = 192 ; 26 modules à
+CP = 0,005 et 33 (contrainte violée) à 0,006 ; avec `--comparer-avec`,
+« partitions identiques ».
+
+Les options se combinent, par exemple :
+
+```bash
+java -jar target/hai913i-tp2.jar /home/user/Téléchargements/resources --cp 0.025 --comparer-liaisons --heritage
+```
+
+Les fichiers exportés (CSV, DOT, texte) sont écrits dans `sorties/`.

@@ -1,5 +1,8 @@
 package hai913i.tp2;
 
+import hai913i.tp2.c4.Balayage;
+import hai913i.tp2.c4.ComparaisonPartitions;
+import hai913i.tp2.c4.Paquetages;
 import hai913i.tp2.couplage.Couple;
 import hai913i.tp2.couplage.Couplage;
 import hai913i.tp2.graphe.Arete;
@@ -19,12 +22,14 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 /**
  * Point d'entrée du TP 2.
  *
  * Usage :
  *   java -jar target/hai913i-tp2.jar <dossier-des-faits> [--cp <valeur>] [--comparer-liaisons] [--heritage]
+ *        [--gui] [--sorties <dossier>] [--balayage] [--paquetages] [--comparer-avec <dossier-des-faits>]
  *
  * A0 : charge les faits et affiche les 3 compteurs.
  * A1 : calcule le couplage entre classes.
@@ -34,6 +39,11 @@ import java.util.Locale;
  * B3 : coupe du dendrogramme en modules (contrainte M/2, seuil CP).
  * C1 (bonus, --comparer-liaisons) : compare le lien moyen et le lien simple.
  * C2 (bonus, --heritage) : enrichit la relation avec l'héritage et compare les modules.
+ * C3 (bonus, --gui) : explorateur graphique Swing.
+ * C4 (bonus, second projet) : --sorties sépare les exports de chaque projet,
+ *   --balayage coupe l'arbre pour une gamme de CP, --paquetages compare les modules aux
+ *   paquetages, --comparer-avec compare les modules à ceux d'un autre jeu de faits du même
+ *   projet (autre extracteur).
  */
 public final class Main {
 
@@ -43,7 +53,8 @@ public final class Main {
 
     public static void main(String[] args) {
         if (args.length == 0) {
-            System.err.println("Usage : java -jar hai913i-tp2.jar <dossier-des-faits> [--cp <valeur>] [--comparer-liaisons] [--heritage]");
+            System.err.println("Usage : java -jar hai913i-tp2.jar <dossier-des-faits> [--cp <valeur>] [--comparer-liaisons] [--heritage] [--gui]");
+            System.err.println("        [--sorties <dossier>] [--balayage] [--paquetages] [--comparer-avec <dossier-des-faits>]");
             System.exit(1);
             return;
         }
@@ -54,6 +65,10 @@ public final class Main {
         boolean comparerLiaisons = false;   // bonus C1
         boolean avecHeritage = false;       // bonus C2
         boolean gui = false;                // bonus C3
+        Path sorties = Path.of("sorties");  // bonus C4 : dossier des exports
+        boolean balayage = false;           // bonus C4
+        boolean paquetages = false;         // bonus C4
+        Path autresFaits = null;            // bonus C4 : second jeu de faits du même projet
         for (int i = 1; i < args.length; i++) {
             if ("--cp".equals(args[i])) {
                 if (i + 1 >= args.length) {
@@ -78,8 +93,23 @@ public final class Main {
             } else if ("--heritage".equals(args[i])) {
                 avecHeritage = true;
             } else if ("--gui".equals(args[i])) {
-                gui = true;}
-            else {
+                gui = true;
+            } else if ("--sorties".equals(args[i]) || "--comparer-avec".equals(args[i])) {
+                if (i + 1 >= args.length) {
+                    System.err.println(args[i] + " attend un dossier.");
+                    System.exit(1);
+                    return;
+                }
+                if ("--sorties".equals(args[i])) {
+                    sorties = Path.of(args[++i]);
+                } else {
+                    autresFaits = Path.of(args[++i]);
+                }
+            } else if ("--balayage".equals(args[i])) {
+                balayage = true;
+            } else if ("--paquetages".equals(args[i])) {
+                paquetages = true;
+            } else {
                 System.err.println("Argument inconnu : " + args[i]);
                 System.exit(1);
                 return;
@@ -97,6 +127,9 @@ public final class Main {
             System.exit(2);
             return;
         }
+
+        // noms courts non ambigus pour tout l'affichage (JUnit a trois TestRunner)
+        Groupe.fixerNoms(facts.classNames());
 
         System.out.println("Dossier des faits : " + dir.toAbsolutePath());
         System.out.println("Jeu de données    : " + facts.name());
@@ -154,9 +187,9 @@ public final class Main {
 
         // export, puis rechargement pour vérifier qu'on retrouve les mêmes valeurs
         try {
-            Path csv = Path.of("sorties", "graphe.csv");
+            Path csv = sorties.resolve("graphe.csv");
             graphe.exporterCsv(csv);
-            graphe.exporterDot(Path.of("sorties", "graphe.dot"));
+            graphe.exporterDot(sorties.resolve("graphe.dot"));
 
             GrapheCouplage recharge = GrapheCouplage.charger(csv);
             boolean identique = recharge.nbNoeuds() == graphe.nbNoeuds()
@@ -166,7 +199,7 @@ public final class Main {
                     identique = false;
                 }
             }
-            System.out.println("Exports écrits dans : " + Path.of("sorties").toAbsolutePath());
+            System.out.println("Exports écrits dans : " + sorties.toAbsolutePath());
             System.out.println("Rechargement identique : " + identique);
         } catch (IOException e) {
             System.err.println("Erreur d'export : " + e.getMessage());
@@ -201,10 +234,10 @@ public final class Main {
         System.out.println("Nœuds internes : " + Dendrogramme.compterInternes(racine));
         System.out.println("Arbre valide   : " + Dendrogramme.estValide(racine, facts.classNames().size()));
         try {
-            Dendrogramme.exporterTexte(Path.of("sorties", "dendrogramme.txt"), racine);
-            Dendrogramme.exporterFusions(Path.of("sorties", "fusions.csv"), regroupement.fusions());
-            Dendrogramme.exporterDot(Path.of("sorties", "dendrogramme.dot"), racine);
-            System.out.println("Exports : sorties/dendrogramme.txt, sorties/fusions.csv, sorties/dendrogramme.dot");
+            Dendrogramme.exporterTexte(sorties.resolve("dendrogramme.txt"), racine);
+            Dendrogramme.exporterFusions(sorties.resolve("fusions.csv"), regroupement.fusions());
+            Dendrogramme.exporterDot(sorties.resolve("dendrogramme.dot"), racine);
+            System.out.println("Exports : " + sorties.resolve("dendrogramme.txt") + ", fusions.csv, dendrogramme.dot");
         } catch (IOException e) {
             System.err.println("Erreur d'export : " + e.getMessage());
             System.exit(2);
@@ -238,6 +271,51 @@ public final class Main {
         System.out.println("Partition valide : " + Coupe.partitionValide(modules, nbClasses));
         System.out.println("Seuil respecté par tous les modules : " + Coupe.seuilRespecte(modules, couplage, cp));
 
+        // ---------- C4 (bonus) : outils pour analyser un second projet ----------
+        if (balayage || paquetages || autresFaits != null) {
+            System.out.println("===============C4=========================");
+        }
+        if (balayage) {
+            System.out.println("Effet de CP (même arbre, M/2 = " + maxModules + ") :");
+            for (String ligne : Balayage.tableau(Balayage.balayer(racine, couplage, nbClasses))) {
+                System.out.println(ligne);
+            }
+        }
+        if (paquetages) {
+            Map<String, String> pk = Paquetages.reels(facts);
+            ComparaisonPartitions.Resultat r = ComparaisonPartitions.comparer(
+                    ComparaisonPartitions.partition(modules), pk);
+            System.out.println("Modules (CP = " + cp + ") comparés aux paquetages :");
+            for (String ligne : ComparaisonPartitions.resume(r, "modules", "paquetages")) {
+                System.out.println("  " + ligne);
+            }
+            for (String ligne : ComparaisonPartitions.detailParModule(modules, pk)) {
+                System.out.println(ligne);
+            }
+        }
+        if (autresFaits != null) {
+            FactsSource autres;
+            try {
+                autres = new CsvFactsSource(autresFaits, Facts.discoverPrefix(autresFaits));
+            } catch (IOException e) {
+                System.err.println("Erreur de lecture (--comparer-avec) : " + e.getMessage());
+                System.exit(2);
+                return;
+            }
+            Couplage couplageAutre = new Couplage(autres);
+            Regroupement regroupementAutre = new Regroupement(couplageAutre, autres.classNames());
+            List<Groupe> modulesAutre = Coupe.couper(regroupementAutre.racine(), couplageAutre, cp);
+            System.out.println("Second jeu de faits : " + autres.name() + " (" + autres.classNames().size()
+                    + " classes, " + autres.methodCount() + " méthodes, " + autres.arcs().size() + " arcs)");
+            System.out.println("Modules au même CP (" + cp + ") : " + modules.size() + " ici, "
+                    + modulesAutre.size() + " avec " + autres.name());
+            ComparaisonPartitions.Resultat r = ComparaisonPartitions.comparer(
+                    ComparaisonPartitions.partition(modules), ComparaisonPartitions.partition(modulesAutre));
+            for (String ligne : ComparaisonPartitions.resume(r, facts.name(), autres.name())) {
+                System.out.println("  " + ligne);
+            }
+        }
+
         // ---------- C1 (bonus) : lien moyen contre lien simple ----------
         if (comparerLiaisons) {
             System.out.println("===============C1=========================");
@@ -262,10 +340,10 @@ public final class Main {
 
             // exports du lien simple, dans des fichiers à part (ceux du lien moyen ne sont pas écrasés)
             try {
-                Dendrogramme.exporterTexte(Path.of("sorties", "dendrogramme-simple.txt"), simple.racine());
-                Dendrogramme.exporterFusions(Path.of("sorties", "fusions-simple.csv"), fusionsSimple);
-                Dendrogramme.exporterDot(Path.of("sorties", "dendrogramme-simple.dot"), simple.racine());
-                System.out.println("Exports : sorties/dendrogramme-simple.txt, fusions-simple.csv, dendrogramme-simple.dot");
+                Dendrogramme.exporterTexte(sorties.resolve("dendrogramme-simple.txt"), simple.racine());
+                Dendrogramme.exporterFusions(sorties.resolve("fusions-simple.csv"), fusionsSimple);
+                Dendrogramme.exporterDot(sorties.resolve("dendrogramme-simple.dot"), simple.racine());
+                System.out.println("Exports : " + sorties.resolve("dendrogramme-simple.txt") + ", fusions-simple.csv, dendrogramme-simple.dot");
             } catch (IOException e) {
                 System.err.println("Erreur d'export : " + e.getMessage());
                 System.exit(2);
@@ -303,10 +381,10 @@ public final class Main {
                             etapeC2, fusion.gauche.libelle(), fusion.droit.libelle(), fusion.similarite));
                     etapeC2++;
                 }
-                Dendrogramme.exporterTexte(Path.of("sorties", "dendrogramme-heritage.txt"), regroupementC2.racine());
-                Dendrogramme.exporterFusions(Path.of("sorties", "fusions-heritage.csv"), regroupementC2.fusions());
-                Dendrogramme.exporterDot(Path.of("sorties", "dendrogramme-heritage.dot"), regroupementC2.racine());
-                System.out.println("Exports : sorties/dendrogramme-heritage.txt, fusions-heritage.csv, dendrogramme-heritage.dot");
+                Dendrogramme.exporterTexte(sorties.resolve("dendrogramme-heritage.txt"), regroupementC2.racine());
+                Dendrogramme.exporterFusions(sorties.resolve("fusions-heritage.csv"), regroupementC2.fusions());
+                Dendrogramme.exporterDot(sorties.resolve("dendrogramme-heritage.dot"), regroupementC2.racine());
+                System.out.println("Exports : " + sorties.resolve("dendrogramme-heritage.txt") + ", fusions-heritage.csv, dendrogramme-heritage.dot");
 
                 // Les liens ajoutés agrandissent |Einter| : tous les couplages sont réduits d'autant.
                 // Pour comparer à exigence équivalente, on ramène CP à la même échelle.

@@ -1,0 +1,105 @@
+Dossier des faits : ../resources
+Jeu de données    : facts-validation
+Classes           : 15
+Méthodes          : 59
+Arcs du graphe    : 44
+Seuil CP retenu   : 0.025
+===============A1=========================
+
+Arcs internes écartés : 7
+Arcs inter-classes    : 37
+Couples non nuls      : 19
+Somme des couplages   : 1.0000
+Symétrique : true
+Diagonale nulle : true
+
+library.model.Item - library.service.LoanService  r=4  C=0.1081
+library.service.LoanService - library.service.LoanService.Loan  r=4  C=0.1081
+library.app.LibraryApp - library.model.Item  r=3  C=0.0811
+library.app.LibraryApp - library.service.Catalog  r=3  C=0.0811
+library.app.LibraryApp - library.service.LoanService  r=3  C=0.0811
+library.app.LibraryApp - library.service.LoanService.Loan  r=2  C=0.0541
+library.model.Item - library.model.Member  r=2  C=0.0541
+library.model.Item - library.service.Catalog  r=2  C=0.0541
+library.model.Member - library.service.LoanService  r=2  C=0.0541
+library.service.LoanService - library.service.Notifier  r=2  C=0.0541
+library.util.Statistics - library.util.TextUtils  r=2  C=0.0541
+library.app.LibraryApp - library.model.Book  r=1  C=0.0270
+library.app.LibraryApp - library.util.Statistics  r=1  C=0.0270
+library.model.Book - library.model.Item  r=1  C=0.0270
+library.model.Category - library.model.Item  r=1  C=0.0270
+library.model.Loanable - library.service.LoanService  r=1  C=0.0270
+library.model.Member - library.service.ConsoleNotifier  r=1  C=0.0270
+library.service.Catalog - library.service.LoanService  r=1  C=0.0270
+library.service.LoanService - library.util.TextUtils  r=1  C=0.0270
+===============A2=========================
+Nœuds  : 15
+Arêtes : 19
+Les 5 couples les plus couplés :
+  library.model.Item - library.service.LoanService  C=0.1081
+  library.service.LoanService - library.service.LoanService.Loan  C=0.1081
+  library.app.LibraryApp - library.model.Item  C=0.0811
+  library.app.LibraryApp - library.service.Catalog  C=0.0811
+  library.app.LibraryApp - library.service.LoanService  C=0.0811
+Classes isolées : [library.model.Dvd, library.service.LoanException]
+Exports écrits dans : sorties-c4/validation
+Rechargement identique : true
+===============B1=========================
+Étape  1 : {Item} + {LoanService}  S=0.1081  -> groupe 15
+Étape  2 : {LibraryApp} + {Catalog}  S=0.0811  -> groupe 16
+Étape  3 : {Item, LoanService} + {LibraryApp, Catalog}  S=0.0608  -> groupe 17
+Étape  4 : {Statistics} + {TextUtils}  S=0.0541  -> groupe 18
+Étape  5 : {Loan} + {Item, LoanService, LibraryApp, Catalog}  S=0.0405  -> groupe 19
+Étape  6 : {Member} + {ConsoleNotifier}  S=0.0270  -> groupe 20
+Étape  7 : {Book} + {Loan, Item, LoanService, LibraryApp, Catalog}  S=0.0108  -> groupe 21
+Étape  8 : {Notifier} + {Book, Loan, Item, LoanService, LibraryApp, Catalog}  S=0.0090  -> groupe 22
+Étape  9 : {Member, ConsoleNotifier} + {Notifier, Book, Loan, Item, LoanService, LibraryApp, Catalog}  S=0.0077  -> groupe 23
+Étape 10 : {Category} + {Member, ConsoleNotifier, Notifier, Book, Loan, Item, LoanService, LibraryApp, Catalog}  S=0.0030  -> groupe 24
+Étape 11 : {Loanable} + {Category, Member, ConsoleNotifier, Notifier, Book, Loan, Item, LoanService, LibraryApp, Catalog}  S=0.0027  -> groupe 25
+Étape 12 : {Statistics, TextUtils} + {Loanable, Category, Member, ConsoleNotifier, Notifier, Book, Loan, Item, LoanService, LibraryApp, Catalog}  S=0.0025  -> groupe 26
+Étape 13 : {Dvd} + {LoanException}  S=0.0000  -> groupe 27
+Étape 14 : {Statistics, TextUtils, Loanable, Category, Member, ConsoleNotifier, Notifier, Book, Loan, Item, LoanService, LibraryApp, Catalog} + {Dvd, LoanException}  S=0.0000  -> groupe 28
+Nombre de fusions : 14
+Similarités qui ne remontent jamais : true
+Classes dans la racine : 15
+===============B2=========================
+Feuilles       : 15
+Nœuds internes : 14
+Arbre valide   : true
+Exports : sorties-c4/validation/dendrogramme.txt, fusions.csv, dendrogramme.dot
+===============B3=========================
+Seuil CP : 0.025
+Module  1 :  2 classe(s)  C interne = 0.0541  {Statistics, TextUtils}
+Module  2 :  1 classe(s)  C interne = -  {Loanable}
+Module  3 :  1 classe(s)  C interne = -  {Category}
+Module  4 :  2 classe(s)  C interne = 0.0270  {Member, ConsoleNotifier}
+Module  5 :  7 classe(s)  C interne = 0.0335  {Notifier, Book, Loan, Item, LoanService, LibraryApp, Catalog}
+Module  6 :  1 classe(s)  C interne = -  {Dvd}
+Module  7 :  1 classe(s)  C interne = -  {LoanException}
+Nombre de modules : 7 (maximum autorisé M/2 = 7)
+Contrainte M/2 respectée.
+Partition valide : true
+Seuil respecté par tous les modules : true
+===============C4=========================
+Modules (CP = 0.025) comparés aux paquetages :
+  Classes communes          : 15
+  Couples ensemble des deux côtés : 8
+  Ensemble seulement dans modules : 15
+  Ensemble seulement dans paquetages : 23
+  Séparés des deux côtés         : 59
+  Indice de Rand                 : 0.6381
+  Pureté de modules selon paquetages : 0.7333
+  Pureté de paquetages selon modules : 0.6000
+  M1    2 classes  dominant library.util (2/2)
+  M4    2 classes  dominant library.model (1/2)  autres : {library.service=[ConsoleNotifier]}
+  M5    7 classes  dominant library.service (4/7)  autres : {library.app=[LibraryApp], library.model=[Book, Item]}
+Second jeu de faits : facts-validation-jdt (15 classes, 59 méthodes, 44 arcs)
+Modules au même CP (0.025) : 7 ici, 7 avec facts-validation-jdt
+  Classes communes          : 15
+  Couples ensemble des deux côtés : 23
+  Ensemble seulement dans facts-validation : 0
+  Ensemble seulement dans facts-validation-jdt : 0
+  Séparés des deux côtés         : 82
+  Indice de Rand                 : 1.0000   (partitions identiques)
+  Pureté de facts-validation selon facts-validation-jdt : 1.0000
+  Pureté de facts-validation-jdt selon facts-validation : 1.0000

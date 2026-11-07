@@ -4,7 +4,9 @@ import hai913i.tp2.Facts;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Chemin 2 du sujet : lit le jeu de données canonique (CSV)
@@ -18,6 +20,7 @@ public final class CsvFactsSource implements FactsSource {
     private final List<String> classNames;
     private final int methodCount;
     private final List<Arc> arcs;
+    private final Map<String, String> paquetages = new HashMap<>();
 
     /**
      * Charge un jeu de données CSV depuis un dossier.
@@ -40,6 +43,11 @@ public final class CsvFactsSource implements FactsSource {
             arcList.add(new Arc(a.caller(), a.callerClass(), a.callee(), a.calleeClass()));
         }
         this.arcs = List.copyOf(arcList);
+
+        // paquetage de chaque classe (bonus C4)
+        for (Facts.ClassInfo c : facts.classes()) {
+            paquetages.put(c.name(), c.packageName());
+        }
     }
     @Override
     public String name() {
@@ -56,5 +64,9 @@ public final class CsvFactsSource implements FactsSource {
     @Override
     public List<Arc> arcs() {
         return arcs;
+    }
+    @Override
+    public String packageOf(String className) {
+        return paquetages.getOrDefault(className, "");
     }
 }
